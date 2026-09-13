@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}Prescriptions - Hospital Management System{% endblock %}
+{% block page_title %}Prescription Records{% endblock %}
+{% block page_subtitle %}Manage medication orders and dosage instructions in MySQL{% endblock %}
+
+{% block topbar_actions %}
+  {% if session.get('role') in ['Admin', 'Doctor'] %}
+  <button type="button" class="btn btn-primary" onclick="openModal('addPrescriptionModal')">
+    <i class="fa-solid fa-file-prescription"></i> Write New Prescription
+  </button>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">All Prescriptions ({{ prescriptions|length }})</h2>
+        <p class="card-subtitle">Prescription records linked to appointments from MySQL</p>
+      </div>
+    </div>
+    <div class="card-body" style="padding-bottom: 0;">
+      <div class="table-toolbar">
+        <div class="search-input-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" class="search-input" data-table="prescriptionsTable" placeholder="Search by medication, patient, doctor...">
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table" id="prescriptionsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Appointment</th>
+            <th>Patient</th>
+            <th>Doctor</th>
+            <th>Medication & Dosage</th>
+            <th>Instructions</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if prescriptions %}
+            {% for pr in prescriptions %}
+              <tr>
+                <td><strong>#{{ pr.prescription_id }}</strong></td>
+                <td>
+                  <span class="badge badge-scheduled">Appt #{{ pr.appointment_id }}</span>
+                  <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">{{ pr.appointment_date }}</div>
+                </td>
+                <td>
+                  <div style="font-weight: 600;">
+                    <i class="fa-solid fa-user-injured" style="color: var(--primary); margin-right: 6px;"></i>
+                    {{ pr.patient_name or '-' }}
+                  </div>
+                </td>
+                <td>
+                  <div style="font-weight: 600;">
+                    <i class="fa-solid fa-user-doctor" style="color: var(--success); margin-right: 6px;"></i>
+                    {{ pr.doctor_name or '-' }}
+                  </div>
+                </td>
+                <td>
+                  <div style="font-weight: 600; color: #0f172a;">
+                    <i class="fa-solid fa-pills" style="color: #9333ea; margin-right: 6px;"></i>
+                    {{ pr.medicines }}
+                  </div>
+                  {% if pr.dosage %}
+                    <div style="font-size: 12px; color: var(--text-muted);">Dosage: {{ pr.dosage }}</div>
+                  {% endif %}
+                </td>
+                <td>{{ pr.instructions or '-' }}</td>
+                <td style="text-align: right;">
+                  {% if session.get('role') in ['Admin', 'Doctor'] %}
+                  <div class="actions-cell" style="justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="editPrescription('{{ pr.prescription_id }}', '{{ pr.appointment_id }}', '{{ (pr.medicines or '')|escape }}', '{{ (pr.dosage or '')|escape }}', '{{ (pr.instructions or '')|escape }}')">
+                      <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm"
+                      onclick="confirmDelete('{{ url_for('prescriptions_delete', id=pr.prescription_id) }}', 'Prescription #{{ pr.prescription_id }} ({{ pr.medicines|escape }})')">
+                      <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                  </div>
+                  {% else %}
+                  <span style="color: var(--text-muted); font-size: 12px;">View Only</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <div class="empty-state-icon"><i class="fa-solid fa-prescription-bottle-medical"></i></div>
+                  <h4>No Prescriptions Found</h4>
+                  <p>Click "Write New Prescription" to issue medication orders for an appointment.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add Prescription Modal -->
+  <div class="modal-backdrop" id="addPrescriptionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-file-prescription" style="color: var(--primary);"></i> Write New Prescription</h3>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form action="{{ url_for('prescriptions_add') }}" method="POST">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Select Appointment *</label>
+            <select name="appointment_id" class="form-control" required>
+              <option value="">-- Choose Appointment --</option>
+              {% for a in appointments %}
+                <option value="{{ a.appointment_id }}">
+                  Appt #{{ a.appointment_id }} ({{ a.appointment_date }}) - Patient: {{ a.patient_name }}, Doctor: {{ a.doctor_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Medicines / Drug Name *</label>
+              <input type="text" name="medicines" class="form-control" placeholder="e.g. Amoxicillin, Paracetamol" required>
+            </div>
+            <div class="form-group">
+              <label>Dosage</label>
+              <input type="text" name="dosage" class="form-control" placeholder="e.g. 500mg, twice daily">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Usage Instructions</label>
+            <textarea name="instructions" class="form-control" rows="3" placeholder="e.g. Take after food with water for 5 days."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Prescription</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Prescription Modal -->
+  <div class="modal-backdrop" id="editPrescriptionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> Edit Prescription</h3>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="editPrescriptionForm" method="POST">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Select Appointment *</label>
+            <select id="edit_pr_appointment_id" name="appointment_id" class="form-control" required>
+              {% for a in appointments %}
+                <option value="{{ a.appointment_id }}">
+                  Appt #{{ a.appointment_id }} ({{ a.appointment_date }}) - Patient: {{ a.patient_name }}, Doctor: {{ a.doctor_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Medicines *</label>
+              <input type="text" id="edit_pr_medicines" name="medicines" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Dosage</label>
+              <input type="text" id="edit_pr_dosage" name="dosage" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Usage Instructions</label>
+            <textarea id="edit_pr_instructions" name="instructions" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Prescription</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function editPrescription(id, apptId, medicines, dosage, instructions) {
+    document.getElementById("editPrescriptionForm").action = "{{ url_for('prescriptions_edit', id=0) }}".replace('0', id);
+    document.getElementById("edit_pr_appointment_id").value = apptId;
+    document.getElementById("edit_pr_medicines").value = medicines;
+    document.getElementById("edit_pr_dosage").value = dosage;
+    document.getElementById("edit_pr_instructions").value = instructions;
+    openModal("editPrescriptionModal");
+  }
+</script>
+{% endblock %}

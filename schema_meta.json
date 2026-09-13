@@ -1,0 +1,302 @@
+{
+  "appointments": {
+    "columns": [
+      {
+        "Field": "appointment_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "PRI",
+        "Default": null,
+        "Extra": "auto_increment"
+      },
+      {
+        "Field": "patient_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "MUL",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "doctor_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "MUL",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "appointment_date",
+        "Type": "date",
+        "Null": "NO",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "appointment_time",
+        "Type": "time",
+        "Null": "NO",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "status",
+        "Type": "varchar(20)",
+        "Null": "YES",
+        "Key": "",
+        "Default": "Scheduled",
+        "Extra": ""
+      }
+    ],
+    "primary_key": [
+      "appointment_id"
+    ],
+    "foreign_keys": [
+      {
+        "TABLE_NAME": "appointments",
+        "COLUMN_NAME": "patient_id",
+        "CONSTRAINT_NAME": "appointments_ibfk_1",
+        "REFERENCED_TABLE_NAME": "patients",
+        "REFERENCED_COLUMN_NAME": "patient_id"
+      },
+      {
+        "TABLE_NAME": "appointments",
+        "COLUMN_NAME": "doctor_id",
+        "CONSTRAINT_NAME": "appointments_ibfk_2",
+        "REFERENCED_TABLE_NAME": "doctors",
+        "REFERENCED_COLUMN_NAME": "doctor_id"
+      }
+    ]
+  },
+  "billing": {
+    "columns": [
+      {
+        "Field": "bill_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "PRI",
+        "Default": null,
+        "Extra": "auto_increment"
+      },
+      {
+        "Field": "patient_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "MUL",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "appointment_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "MUL",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "amount",
+        "Type": "decimal(10,2)",
+        "Null": "NO",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "payment_status",
+        "Type": "varchar(20)",
+        "Null": "YES",
+        "Key": "",
+        "Default": "Pending",
+        "Extra": ""
+      },
+      {
+        "Field": "payment_date",
+        "Type": "date",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      }
+    ],
+    "primary_key": [
+      "bill_id"
+    ],
+    "foreign_keys": [
+      {
+        "TABLE_NAME": "billing",
+        "COLUMN_NAME": "patient_id",
+        "CONSTRAINT_NAME": "billing_ibfk_1",
+        "REFERENCED_TABLE_NAME": "patients",
+        "REFERENCED_COLUMN_NAME": "patient_id"
+      },
+      {
+        "TABLE_NAME": "billing",
+        "COLUMN_NAME": "appointment_id",
+        "CONSTRAINT_NAME": "billing_ibfk_2",
+        "REFERENCED_TABLE_NAME": "appointments",
+        "REFERENCED_COLUMN_NAME": "appointment_id"
+      }
+    ]
+  },
+  "doctors": {
+    "columns": [
+      {
+        "Field": "doctor_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "PRI",
+        "Default": null,
+        "Extra": "auto_increment"
+      },
+      {
+        "Field": "name",
+        "Type": "varchar(100)",
+        "Null": "NO",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "specialization",
+        "Type": "varchar(100)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "phone",
+        "Type": "varchar(15)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "email",
+        "Type": "varchar(100)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      }
+    ],
+    "primary_key": [
+      "doctor_id"
+    ]
+  },
+  "patients": {
+    "columns": [
+      {
+        "Field": "patient_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "PRI",
+        "Default": null,
+        "Extra": "auto_increment"
+      },
+      {
+        "Field": "name",
+        "Type": "varchar(100)",
+        "Null": "NO",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "age",
+        "Type": "int",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "gender",
+        "Type": "varchar(10)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "phone",
+        "Type": "varchar(15)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "address",
+        "Type": "varchar(255)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      }
+    ],
+    "primary_key": [
+      "patient_id"
+    ]
+  },
+  "prescriptions": {
+    "columns": [
+      {
+        "Field": "prescription_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "PRI",
+        "Default": null,
+        "Extra": "auto_increment"
+      },
+      {
+        "Field": "appointment_id",
+        "Type": "int",
+        "Null": "NO",
+        "Key": "MUL",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "medicines",
+        "Type": "varchar(255)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "dosage",
+        "Type": "varchar(100)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      },
+      {
+        "Field": "instructions",
+        "Type": "varchar(255)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+      }
+    ],
+    "primary_key": [
+      "prescription_id"
+    ],
+    "foreign_keys": [
+      {
+        "TABLE_NAME": "prescriptions",
+        "COLUMN_NAME": "appointment_id",
+        "CONSTRAINT_NAME": "prescriptions_ibfk_1",
+        "REFERENCED_TABLE_NAME": "appointments",
+        "REFERENCED_COLUMN_NAME": "appointment_id"
+      }
+    ]
+  }
+}

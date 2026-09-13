@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}Patients - Hospital Management System{% endblock %}
+{% block page_title %}Patient Management{% endblock %}
+{% block page_subtitle %}Manage and view registered hospital patients{% endblock %}
+
+{% block topbar_actions %}
+  {% if session.get('role') in ['Admin', 'Receptionist'] %}
+    <button type="button" class="btn btn-primary" onclick="openModal('addPatientModal')">
+      <i class="fa-solid fa-user-plus"></i> Add New Patient
+    </button>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">All Patients ({{ patients|length }})</h2>
+        <p class="card-subtitle">Complete directory of registered patients in MySQL</p>
+      </div>
+    </div>
+    <div class="card-body" style="padding-bottom: 0;">
+      <div class="table-toolbar">
+        <div class="search-input-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" class="search-input" data-table="patientsTable" placeholder="Search patients by name, phone, address...">
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table" id="patientsTable">
+        <thead>
+          <tr>
+            <th>Patient ID</th>
+            <th>Name</th>
+            <th>Age / Gender</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if patients %}
+            {% for p in patients %}
+              <tr>
+                <td><strong>#{{ p.patient_id }}</strong></td>
+                <td>
+                  <div style="font-weight: 600;">{{ p.name }}</div>
+                </td>
+                <td>
+                  {{ p.age if p.age is not none else '-' }} yrs / 
+                  <span style="text-transform: capitalize;">{{ p.gender or '-' }}</span>
+                </td>
+                <td>
+                  <div><i class="fa-solid fa-phone" style="font-size: 11px; color: var(--text-muted);"></i> {{ p.phone or '-' }}</div>
+                </td>
+                <td>{{ p.address or '-' }}</td>
+                <td style="text-align: right;">
+                  {% if session.get('role') in ['Admin', 'Receptionist'] %}
+                    <div class="actions-cell" style="justify-content: flex-end;">
+                      <button type="button" class="btn btn-secondary btn-sm" 
+                        onclick="editPatient('{{ p.patient_id }}', '{{ p.name|escape }}', '{{ p.age if p.age is not none else '' }}', '{{ p.gender or '' }}', '{{ p.phone or '' }}', '{{ (p.address or '')|escape }}')">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                      </button>
+                      <button type="button" class="btn btn-danger btn-sm"
+                        onclick="confirmDelete('{{ url_for('patients_delete', id=p.patient_id) }}', 'Patient {{ p.name|escape }} (#{{ p.patient_id }})')">
+                        <i class="fa-solid fa-trash"></i> Delete
+                      </button>
+                    </div>
+                  {% else %}
+                    <span style="font-size: 12px; color: var(--text-muted);"><i class="fa-solid fa-lock"></i> View Only</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <div class="empty-state-icon"><i class="fa-solid fa-user-slash"></i></div>
+                  <h4>No Patients Registered</h4>
+                  <p>Click "Add New Patient" to register the first patient into MySQL.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add Patient Modal -->
+  <div class="modal-backdrop" id="addPatientModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-user-plus" style="color: var(--primary);"></i> Add New Patient</h3>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form action="{{ url_for('patients_add') }}" method="POST">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. John Doe" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Age</label>
+              <input type="number" name="age" class="form-control" placeholder="e.g. 35" min="0" max="150">
+            </div>
+            <div class="form-group">
+              <label>Gender</label>
+              <select name="gender" class="form-control">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="tel" name="phone" class="form-control" placeholder="e.g. 9876543210" required>
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <textarea name="address" class="form-control" rows="2" placeholder="Street, City, State"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Patient</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Patient Modal -->
+  <div class="modal-backdrop" id="editPatientModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-user-pen" style="color: var(--primary);"></i> Edit Patient Details</h3>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="editPatientForm" method="POST">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="edit_name" name="name" class="form-control" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Age</label>
+              <input type="number" id="edit_age" name="age" class="form-control" min="0" max="150">
+            </div>
+            <div class="form-group">
+              <label>Gender</label>
+              <select id="edit_gender" name="gender" class="form-control">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="tel" id="edit_phone" name="phone" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <textarea id="edit_address" name="address" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Patient</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function editPatient(id, name, age, gender, phone, address) {
+    document.getElementById("editPatientForm").action = "{{ url_for('patients_edit', id=0) }}".replace('0', id);
+    document.getElementById("edit_name").value = name;
+    document.getElementById("edit_age").value = age;
+    document.getElementById("edit_gender").value = gender;
+    document.getElementById("edit_phone").value = phone;
+    document.getElementById("edit_address").value = address;
+    openModal("editPatientModal");
+  }
+</script>
+{% endblock %}

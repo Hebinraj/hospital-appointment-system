@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Appointments - Hospital Management System{% endblock %}
+{% block page_title %}Appointment Scheduling{% endblock %}
+{% block page_subtitle %}Manage patient appointments with hospital doctors{% endblock %}
+
+{% block topbar_actions %}
+  {% if session.get('role') in ['Admin', 'Receptionist'] %}
+  <button type="button" class="btn btn-primary" onclick="openModal('addAppointmentModal')">
+    <i class="fa-solid fa-calendar-plus"></i> Schedule New Appointment
+  </button>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">All Appointments ({{ appointments|length }})</h2>
+        <p class="card-subtitle">Appointments relational view joined with Patients and Doctors in MySQL</p>
+      </div>
+    </div>
+    <div class="card-body" style="padding-bottom: 0;">
+      <div class="table-toolbar">
+        <div class="search-input-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" class="search-input" data-table="appointmentsTable" placeholder="Search by patient, doctor, date, status...">
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table" id="appointmentsTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Patient</th>
+            <th>Doctor</th>
+            <th>Appointment Date</th>
+            <th>Appointment Time</th>
+            <th>Status</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if appointments %}
+            {% for a in appointments %}
+              {% set st = (a.status or 'Scheduled')|lower %}
+              <tr>
+                <td><strong>#{{ a.appointment_id }}</strong></td>
+                <td>
+                  <div style="font-weight: 600;">
+                    <i class="fa-solid fa-user-injured" style="color: var(--primary); margin-right: 6px;"></i>
+                    {{ a.patient_name or 'Patient #' ~ a.patient_id }}
+                  </div>
+                  {% if a.patient_phone %}
+                    <div style="font-size: 12px; color: var(--text-muted);">{{ a.patient_phone }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  <div style="font-weight: 600;">
+                    <i class="fa-solid fa-user-doctor" style="color: var(--success); margin-right: 6px;"></i>
+                    {{ a.doctor_name or 'Dr. #' ~ a.doctor_id }}
+                  </div>
+                  {% if a.doctor_spec %}
+                    <div style="font-size: 12px; color: var(--text-muted);">{{ a.doctor_spec }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  <div><i class="fa-regular fa-calendar" style="font-size: 11px; color: var(--text-muted);"></i> {{ a.appointment_date }}</div>
+                </td>
+                <td>
+                  <div><i class="fa-regular fa-clock" style="font-size: 11px; color: var(--text-muted);"></i> {{ a.appointment_time }}</div>
+                </td>
+                <td>
+                  {% if st == 'completed' %}
+                    <span class="badge badge-completed">Completed</span>
+                  {% elif st == 'cancelled' %}
+                    <span class="badge badge-cancelled">Cancelled</span>
+                  {% else %}
+                    <span class="badge badge-scheduled">{{ a.status or 'Scheduled' }}</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: right;">
+                  <div class="actions-cell" style="justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary btn-sm"
+                      onclick="editAppointment('{{ a.appointment_id }}', '{{ a.patient_id }}', '{{ a.doctor_id }}', '{{ a.appointment_date }}', '{{ a.appointment_time }}', '{{ a.status or 'Scheduled' }}')">
+                      <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </button>
+                    {% if session.get('role') in ['Admin', 'Receptionist'] %}
+                    <button type="button" class="btn btn-danger btn-sm"
+                      onclick="confirmDelete('{{ url_for('appointments_delete', id=a.appointment_id) }}', 'Appointment #{{ a.appointment_id }}')">
+                      <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <div class="empty-state-icon"><i class="fa-regular fa-calendar-xmark"></i></div>
+                  <h4>No Appointments Scheduled</h4>
+                  <p>Click "Schedule New Appointment" to book a consultation.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Schedule Appointment Modal -->
+  <div class="modal-backdrop" id="addAppointmentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-calendar-plus" style="color: var(--primary);"></i> Schedule New Appointment</h3>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form action="{{ url_for('appointments_add') }}" method="POST">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Select Patient *</label>
+            <select name="patient_id" class="form-control" required>
+              <option value="">-- Choose Patient --</option>
+              {% for p in patients %}
+                <option value="{{ p.patient_id }}">{{ p.name }} (#{{ p.patient_id }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Select Doctor *</label>
+            <select name="doctor_id" class="form-control" required>
+              <option value="">-- Choose Doctor --</option>
+              {% for d in doctors %}
+                <option value="{{ d.doctor_id }}">{{ d.name }} {% if d.specialization %}({{ d.specialization }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Appointment Date *</label>
+              <input type="date" name="appointment_date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Appointment Time *</label>
+              <input type="time" name="appointment_time" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status" class="form-control">
+              <option value="Scheduled" selected>Scheduled</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Book Appointment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Appointment Modal -->
+  <div class="modal-backdrop" id="editAppointmentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> Edit Appointment</h3>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="editAppointmentForm" method="POST">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Select Patient *</label>
+            <select id="edit_patient_id" name="patient_id" class="form-control" required>
+              {% for p in patients %}
+                <option value="{{ p.patient_id }}">{{ p.name }} (#{{ p.patient_id }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Select Doctor *</label>
+            <select id="edit_doctor_id" name="doctor_id" class="form-control" required>
+              {% for d in doctors %}
+                <option value="{{ d.doctor_id }}">{{ d.name }} {% if d.specialization %}({{ d.specialization }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Appointment Date *</label>
+              <input type="date" id="edit_app_date" name="appointment_date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Appointment Time *</label>
+              <input type="time" id="edit_app_time" name="appointment_time" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Status</label>
+            <select id="edit_app_status" name="status" class="form-control">
+              <option value="Scheduled">Scheduled</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Appointment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function editAppointment(id, patientId, doctorId, date, time, status) {
+    document.getElementById("editAppointmentForm").action = "{{ url_for('appointments_edit', id=0) }}".replace('0', id);
+    document.getElementById("edit_patient_id").value = patientId;
+    document.getElementById("edit_doctor_id").value = doctorId;
+    document.getElementById("edit_app_date").value = date;
+    document.getElementById("edit_app_time").value = time;
+    document.getElementById("edit_app_status").value = status;
+    openModal("editAppointmentModal");
+  }
+</script>
+{% endblock %}

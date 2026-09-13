@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Hospital Dashboard - MediCare HMS{% endblock %}
+{% block page_title %}Hospital Dashboard{% endblock %}
+{% block page_subtitle %}Welcome back, {{ session.get('full_name', 'User') }} ({{ session.get('role', 'Staff') }}){% endblock %}
+
+{% block topbar_actions %}
+  {% if session.get('role') in ['Admin', 'Receptionist'] %}
+    <a href="{{ url_for('appointments_list') }}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Schedule Appointment
+    </a>
+  {% elif session.get('role') == 'Doctor' %}
+    <a href="{{ url_for('prescriptions_list') }}" class="btn btn-primary">
+      <i class="fa-solid fa-file-prescription"></i> Write Prescription
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon blue">
+        <i class="fa-solid fa-users"></i>
+      </div>
+      <div class="stat-details">
+        <h3>{{ stats.patients_count }}</h3>
+        <p>Total Patients</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon emerald">
+        <i class="fa-solid fa-user-doctor"></i>
+      </div>
+      <div class="stat-details">
+        <h3>{{ stats.doctors_count }}</h3>
+        <p>Active Doctors</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon amber">
+        <i class="fa-solid fa-calendar-check"></i>
+      </div>
+      <div class="stat-details">
+        <h3>{{ stats.appointments_count }}</h3>
+        <p>{% if session.get('role') == 'Doctor' %}My Appointments{% else %}Total Appointments{% endif %}</p>
+      </div>
+    </div>
+
+    {% if session.get('role') != 'Doctor' %}
+      <div class="stat-card">
+        <div class="stat-icon purple">
+          <i class="fa-solid fa-file-invoice"></i>
+        </div>
+        <div class="stat-details">
+          <h3>{{ stats.pending_bills_count }}</h3>
+          <p>Pending Invoices</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon rose">
+          <i class="fa-solid fa-indian-rupee-sign"></i>
+        </div>
+        <div class="stat-details">
+          <h3>₹{{ "%.2f"|format(stats.total_revenue|float) }}</h3>
+          <p>Total Revenue (Paid)</p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Appointments Table Card -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">
+          {% if session.get('role') == 'Doctor' %}
+            My Recent Appointments
+          {% else %}
+            Recent Appointments
+          {% endif %}
+        </h2>
+        <p class="card-subtitle">Latest appointments booked in the system</p>
+      </div>
+      <a href="{{ url_for('appointments_list') }}" class="btn btn-secondary btn-sm">
+        View All Appointments <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Patient</th>
+            <th>Doctor</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if recent_appointments %}
+            {% for app in recent_appointments %}
+              <tr>
+                <td><strong>#{{ app.appointment_id }}</strong></td>
+                <td>{{ app.patient_name or 'Patient #' ~ app.patient_id }}</td>
+                <td>{{ app.doctor_name or 'Dr. #' ~ app.doctor_id }}</td>
+                <td>{{ app.appointment_date }}</td>
+                <td>{{ app.appointment_time }}</td>
+                <td>
+                  {% set st = (app.status or 'Scheduled')|lower %}
+                  {% if st == 'completed' %}
+                    <span class="badge badge-completed">Completed</span>
+                  {% elif st == 'cancelled' %}
+                    <span class="badge badge-cancelled">Cancelled</span>
+                  {% else %}
+                    <span class="badge badge-scheduled">{{ app.status or 'Scheduled' }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <div class="empty-state-icon"><i class="fa-regular fa-calendar-xmark"></i></div>
+                  <h4>No Appointments Found</h4>
+                  <p>Start by scheduling an appointment between a patient and a doctor.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Role-Based Quick Actions & Info -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Quick Actions</h3>
+      </div>
+      <div class="card-body" style="display: flex; flex-direction: column; gap: 12px;">
+        {% if session.get('role') in ['Admin', 'Receptionist'] %}
+          <a href="{{ url_for('patients_list') }}" class="btn btn-secondary" style="justify-content: flex-start;">
+            <i class="fa-solid fa-user-plus" style="color: var(--primary);"></i> Register New Patient
+          </a>
+          <a href="{{ url_for('appointments_list') }}" class="btn btn-secondary" style="justify-content: flex-start;">
+            <i class="fa-solid fa-calendar-plus" style="color: var(--warning);"></i> Book Appointment
+          </a>
+        {% endif %}
+
+        {% if session.get('role') == 'Admin' %}
+          <a href="{{ url_for('doctors_list') }}" class="btn btn-secondary" style="justify-content: flex-start;">
+            <i class="fa-solid fa-user-doctor" style="color: var(--success);"></i> Add New Doctor
+          </a>
+        {% endif %}
+
+        {% if session.get('role') in ['Admin', 'Doctor'] %}
+          <a href="{{ url_for('prescriptions_list') }}" class="btn btn-secondary" style="justify-content: flex-start;">
+            <i class="fa-solid fa-prescription" style="color: #9333ea;"></i> Write Prescription
+          </a>
+        {% endif %}
+
+        {% if session.get('role') in ['Admin', 'Receptionist'] %}
+          <a href="{{ url_for('billing_list') }}" class="btn btn-secondary" style="justify-content: flex-start;">
+            <i class="fa-solid fa-file-invoice-dollar" style="color: #e11d48;"></i> Generate Patient Invoice
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> Active Role Permissions</h3>
+      </div>
+      <div class="card-body" style="font-size: 13px; line-height: 1.8; color: var(--text-main);">
+        <p><strong>Current User:</strong> <code>{{ session.get('username') }}</code> ({{ session.get('full_name') }})</p>
+        <p><strong>Role:</strong> <span class="badge badge-scheduled">{{ session.get('role') }}</span></p>
+        <p><strong>Permissions:</strong></p>
+        <ul style="margin-left: 20px; color: var(--text-muted);">
+          {% if session.get('role') == 'Admin' %}
+            <li>Full CRUD privileges across all tables.</li>
+            <li>System administration and user oversight.</li>
+          {% elif session.get('role') == 'Doctor' %}
+            <li>View assigned patient appointments and update consultation status.</li>
+            <li>Write, edit, and issue prescriptions.</li>
+            <li>Restricted from billing and doctor staff management.</li>
+          {% else %}
+            <li>Patient registration, check-in, and appointments booking.</li>
+            <li>Billing invoice creation and payment collection.</li>
+            <li>View-only access to doctor staff and prescriptions.</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+{% endblock %}

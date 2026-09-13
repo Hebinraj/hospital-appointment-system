@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Hospital Management System{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Left Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <i class="fa-solid fa-hospital"></i>
+      </div>
+      <div class="sidebar-title">
+        <h2>MediCare Hospital</h2>
+        <span>DBMS Project</span>
+      </div>
+    </div>
+
+    <!-- User Profile Badge in Sidebar -->
+    {% if session.get('username') %}
+      <div style="padding: 16px 20px; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 14px;">
+            {{ session.get('full_name', 'U')[0] }}
+          </div>
+          <div style="overflow: hidden;">
+            <div style="font-size: 13px; font-weight: 600; color: #f8fafc; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+              {{ session.get('full_name', 'User') }}
+            </div>
+            <div>
+              {% set role = session.get('role', 'Admin') %}
+              {% if role == 'Admin' %}
+                <span class="badge badge-scheduled" style="font-size: 10px; padding: 2px 8px;"><i class="fa-solid fa-shield-halved"></i> Admin</span>
+              {% elif role == 'Doctor' %}
+                <span class="badge badge-completed" style="font-size: 10px; padding: 2px 8px;"><i class="fa-solid fa-user-doctor"></i> Doctor</span>
+              {% else %}
+                <span class="badge badge-pending" style="font-size: 10px; padding: 2px 8px;"><i class="fa-solid fa-id-card-clip"></i> Receptionist</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('dashboard') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+        <span class="icon"><i class="fa-solid fa-chart-pie"></i></span>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="{{ url_for('patients_list') }}" class="nav-link {% if active_page == 'patients' %}active{% endif %}">
+        <span class="icon"><i class="fa-solid fa-user-injured"></i></span>
+        <span>Patients</span>
+      </a>
+
+      <a href="{{ url_for('doctors_list') }}" class="nav-link {% if active_page == 'doctors' %}active{% endif %}">
+        <span class="icon"><i class="fa-solid fa-user-doctor"></i></span>
+        <span>Doctors</span>
+      </a>
+
+      <a href="{{ url_for('appointments_list') }}" class="nav-link {% if active_page == 'appointments' %}active{% endif %}">
+        <span class="icon"><i class="fa-solid fa-calendar-check"></i></span>
+        <span>Appointments</span>
+      </a>
+
+      <a href="{{ url_for('prescriptions_list') }}" class="nav-link {% if active_page == 'prescriptions' %}active{% endif %}">
+        <span class="icon"><i class="fa-solid fa-pills"></i></span>
+        <span>Prescriptions</span>
+      </a>
+
+      {# Hide Billing navigation from Doctors #}
+      {% if session.get('role') != 'Doctor' %}
+        <a href="{{ url_for('billing_list') }}" class="nav-link {% if active_page == 'billing' %}active{% endif %}">
+          <span class="icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
+          <span>Billing</span>
+        </a>
+      {% endif %}
+
+      <div style="margin-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px;">
+        <a href="{{ url_for('logout') }}" class="nav-link" style="color: #f87171;">
+          <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+          <span>Sign Out</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      {% if db_status %}
+        <div class="db-badge connected" title="Connected to MySQL database">
+          <span class="dot"></span> MySQL Connected
+        </div>
+      {% else %}
+        <div class="db-badge disconnected" title="Check .env configuration">
+          <span class="dot"></span> MySQL Disconnected
+        </div>
+      {% endif %}
+      <div style="margin-top: 8px; color: #64748b; font-size: 11px;">
+        DB: {{ db_name }}
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        <p>{% block page_subtitle %}Hospital Management & Appointment Overview{% endblock %}</p>
+      </div>
+      <div class="topbar-right">
+        {% block topbar_actions %}{% endblock %}
+        {% if session.get('username') %}
+          <div style="display: flex; align-items: center; gap: 12px; margin-left: 12px; padding-left: 12px; border-left: 1px solid var(--border-color);">
+            <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">
+              Logged in as <strong>{{ session.get('username') }}</strong> ({{ session.get('role') }})
+            </span>
+            <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm" title="Sign Out">
+              <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="content-container">
+      <!-- Flash Messages -->
+      <div class="alert-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category if category != 'error' else 'danger' }}">
+                <span><i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'error' %}fa-circle-exclamation{% else %}fa-circle-info{% endif %}"></i> {{ message }}</span>
+                <button type="button" class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% if not db_status %}
+          <div class="alert alert-danger">
+            <span><i class="fa-solid fa-triangle-exclamation"></i> <strong>Database Warning:</strong> Could not connect to MySQL. ({{ db_error }})</span>
+          </div>
+        {% endif %}
+      </div>
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Reusable Delete Confirmation Modal -->
+  <div class="modal-backdrop" id="deleteConfirmModal">
+    <div class="modal" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Confirm Delete</h3>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete <strong id="deleteItemName">this record</strong>?</p>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">
+          This action will permanently remove this record from MySQL database. Associated records might also be affected if foreign keys cascade.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+        <form id="deleteForm" method="POST" style="margin: 0;">
+          <button type="submit" class="btn btn-danger">Delete Record</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
